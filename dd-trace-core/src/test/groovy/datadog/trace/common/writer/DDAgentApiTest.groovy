@@ -17,6 +17,7 @@ import datadog.trace.core.DDSpan
 import datadog.trace.core.DDSpanContext
 import datadog.trace.core.monitor.Monitoring
 import datadog.trace.core.serialization.ByteBufferConsumer
+import datadog.trace.core.serialization.FlushingBuffer
 import datadog.trace.core.serialization.msgpack.MsgPackWriter
 import datadog.trace.test.util.DDSpecification
 import org.msgpack.jackson.dataformat.MessagePackFactory
@@ -391,9 +392,8 @@ class DDAgentApiTest extends DDSpecification {
   }
 
   Payload prepareTraces(String agentVersion, List<List<DDSpan>> traces) {
-    ByteBuffer buffer = ByteBuffer.allocate(1 << 20)
     Traces traceCapture = new Traces()
-    def packer = new MsgPackWriter(traceCapture, buffer)
+    def packer = new MsgPackWriter(new FlushingBuffer(1 << 20, traceCapture))
     def traceMapper = agentVersion.equals("v0.5/traces")
       ? new TraceMapperV0_5()
       : new TraceMapperV0_4()
@@ -402,7 +402,8 @@ class DDAgentApiTest extends DDSpecification {
     }
     packer.flush()
     return traceMapper.newPayload()
-      .withBody(traceCapture.traceCount, traceCapture.buffer)
+      .withBody(traceCapture.traceCount,
+        traces.isEmpty() ? ByteBuffer.allocate(0) : traceCapture.buffer)
   }
 
   static class Traces implements ByteBufferConsumer {

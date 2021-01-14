@@ -4,6 +4,7 @@ package datadog.trace.common.writer.ddagent
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.ObjectReader
 import datadog.trace.core.serialization.ByteBufferConsumer
+import datadog.trace.core.serialization.FlushingBuffer
 import datadog.trace.core.serialization.msgpack.MsgPackWriter
 import datadog.trace.test.util.DDSpecification
 import org.junit.Assert
@@ -11,7 +12,6 @@ import org.msgpack.core.MessageFormat
 import org.msgpack.core.MessagePack
 import org.msgpack.core.MessageUnpacker
 
-import java.nio.BufferOverflowException
 import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
@@ -37,15 +37,13 @@ class TraceMapperV04PayloadTest extends DDSpecification {
     List<List<TraceGenerator.PojoSpan>> traces = restoreTraces()
     TraceMapperV0_4 traceMapper = new TraceMapperV0_4()
     PayloadVerifier verifier = new PayloadVerifier(traces, traceMapper)
-    MsgPackWriter packer = new MsgPackWriter(verifier, ByteBuffer.allocate(100 << 10))
+    MsgPackWriter packer = new MsgPackWriter(new FlushingBuffer(100 << 10, verifier))
     when:
     boolean tracesFitInBuffer = true
-    try {
-      for (List<TraceGenerator.PojoSpan> trace : traces) {
-        packer.format(trace, traceMapper)
+    for (List<TraceGenerator.PojoSpan> trace : traces) {
+      if (!packer.format(trace, traceMapper)) {
+        tracesFitInBuffer = false
       }
-    } catch (BufferOverflowException e) {
-      tracesFitInBuffer = false
     }
     packer.flush()
 
@@ -77,7 +75,7 @@ class TraceMapperV04PayloadTest extends DDSpecification {
 
     private final List<List<TraceGenerator.PojoSpan>> expectedTraces
     private final TraceMapperV0_4 mapper
-    private final ByteBuffer captured = ByteBuffer.allocate(200 << 10)
+    private ByteBuffer captured = ByteBuffer.allocate(200 << 10)
 
     private int position = 0
 
@@ -88,6 +86,9 @@ class TraceMapperV04PayloadTest extends DDSpecification {
 
     @Override
     void accept(int messageCount, ByteBuffer buffer) {
+      if (expectedTraces.isEmpty() && messageCount == 0) {
+        return
+      }
       try {
         Payload payload = mapper.newPayload().withBody(messageCount, buffer)
         payload.writeTo(this)
@@ -203,6 +204,13 @@ class TraceMapperV04PayloadTest extends DDSpecification {
 
     @Override
     int write(ByteBuffer src) {
+      if (captured.remaining() < src.remaining()) {
+        ByteBuffer newBuffer = ByteBuffer.allocate(captured.capacity() + src.capacity())
+        captured.flip()
+        newBuffer.put(captured)
+        captured = newBuffer
+        return write(src)
+      }
       captured.put(src)
       return src.position()
     }
