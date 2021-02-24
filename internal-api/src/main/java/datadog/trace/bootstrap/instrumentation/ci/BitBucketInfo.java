@@ -1,5 +1,8 @@
 package datadog.trace.bootstrap.instrumentation.ci;
 
+import datadog.trace.bootstrap.instrumentation.ci.git.CommitInfo;
+import datadog.trace.bootstrap.instrumentation.ci.git.GitInfo;
+
 class BitBucketInfo extends CIProviderInfo {
 
   // https://support.atlassian.com/bitbucket-cloud/docs/variables-and-secrets/
@@ -14,37 +17,31 @@ class BitBucketInfo extends CIProviderInfo {
   public static final String BITBUCKET_GIT_BRANCH = "BITBUCKET_BRANCH";
   public static final String BITBUCKET_GIT_TAG = "BITBUCKET_TAG";
 
-  BitBucketInfo() {
+  @Override
+  protected GitInfo buildCIGitInfo() {
+    return GitInfo.builder()
+        .repositoryURL(filterSensitiveInfo(System.getenv(BITBUCKET_GIT_REPOSITORY_URL)))
+        .branch(normalizeRef(System.getenv(BITBUCKET_GIT_BRANCH)))
+        .tag(normalizeRef(System.getenv(BITBUCKET_GIT_TAG)))
+        .commit(CommitInfo.builder().sha(System.getenv(BITBUCKET_GIT_COMMIT)).build())
+        .build();
+  }
+
+  @Override
+  protected CIInfo buildCIInfo() {
     final String repo = System.getenv(BITBUCKET_REPO_FULL_NAME);
     final String number = System.getenv(BITBUCKET_BUILD_NUMBER);
     final String url = buildPipelineUrl(repo, number);
 
-    this.ciTags =
-        CITagsBuilder.from(this.ciTags)
-            .withCiProviderName(BITBUCKET_PROVIDER_NAME)
-            .withCiPipelineId(buildPipelineId())
-            .withCiPipelineName(repo)
-            .withCiPipelineNumber(number)
-            .withCiPipelineUrl(url)
-            .withCiJorUrl(url)
-            .withCiWorkspacePath(getWorkspace())
-            .withGitRepositoryUrl(
-                filterSensitiveInfo(System.getenv(BITBUCKET_GIT_REPOSITORY_URL)),
-                getLocalGitRepositoryUrl())
-            .withGitCommit(getGitCommit(), getLocalGitCommitSha())
-            .withGitBranch(normalizeRef(System.getenv(BITBUCKET_GIT_BRANCH)), getLocalGitBranch())
-            .withGitTag(normalizeRef(System.getenv(BITBUCKET_GIT_TAG)), getLocalGitTag())
-            .build();
-  }
-
-  @Override
-  protected String buildGitCommit() {
-    return System.getenv(BITBUCKET_GIT_COMMIT);
-  }
-
-  @Override
-  protected String buildWorkspace() {
-    return System.getenv(BITBUCKET_WORKSPACE_PATH);
+    return CIInfo.builder()
+        .ciProviderName(BITBUCKET_PROVIDER_NAME)
+        .ciPipelineId(buildPipelineId())
+        .ciPipelineName(repo)
+        .ciPipelineNumber(number)
+        .ciPipelineUrl(url)
+        .ciJobUrl(url)
+        .ciWorkspace(expandTilde(System.getenv(BITBUCKET_WORKSPACE_PATH)))
+        .build();
   }
 
   private String buildPipelineUrl(final String repo, final String number) {
