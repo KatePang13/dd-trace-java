@@ -56,8 +56,10 @@ public class DDId {
     return DDId.create(parseUnsignedLongHex(s), null);
   }
 
-  private final long id;
-  private String str; // cache for string representation
+  public long id;
+  public String str; // cache for string representation
+
+  DDId() {}
 
   private DDId(long id, String str) {
     this.id = id;

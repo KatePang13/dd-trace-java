@@ -90,20 +90,23 @@ class TraceGenerator {
 
   static class PojoSpan implements CoreSpan<PojoSpan> {
 
-    private final CharSequence serviceName
-    private final CharSequence operationName
-    private final CharSequence resourceName
-    private final DDId traceId
-    private final DDId spanId
-    private final DDId parentId
-    private final long start
-    private final long duration
-    private final int error
-    private final Map<String, Number> metrics
-    private final String type
-    private final boolean measured
-    private final Metadata metadata
+     String serviceName
+     String operationName
+     String resourceName
+     DDId traceId
+     DDId spanId
+     DDId parentId
+     long start
+     long duration
+     int error
+     Map<String, Number> metrics
+     String type
+     boolean measured
+     Metadata metadata
+     boolean topLevel
+     boolean forceKeep
 
+    PojoSpan(){}
     PojoSpan(
       String serviceName,
       String operationName,
@@ -142,17 +145,17 @@ class TraceGenerator {
 
     @Override
     String getServiceName() {
-      return serviceName
+      return UTF8BytesString.create(serviceName)
     }
 
     @Override
     CharSequence getOperationName() {
-      return operationName
+      return UTF8BytesString.create(operationName)
     }
 
     @Override
     CharSequence getResourceName() {
-      return resourceName
+      return UTF8BytesString.create(resourceName)
     }
 
     @Override

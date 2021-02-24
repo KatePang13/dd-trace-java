@@ -4,10 +4,12 @@ import datadog.trace.bootstrap.instrumentation.api.UTF8BytesString;
 import java.util.Map;
 
 public class Metadata {
-  private final long threadId;
-  private final UTF8BytesString threadName;
-  private final Map<String, Object> tags;
-  private final Map<String, String> baggage;
+  long threadId;
+  String threadName;
+  Map<String, Object> tags;
+  Map<String, String> baggage;
+
+  public Metadata() {}
 
   public Metadata(
       long threadId,
@@ -15,7 +17,7 @@ public class Metadata {
       Map<String, Object> tags,
       Map<String, String> baggage) {
     this.threadId = threadId;
-    this.threadName = threadName;
+    this.threadName = threadName.toString();
     this.tags = tags;
     this.baggage = baggage;
   }
@@ -25,7 +27,7 @@ public class Metadata {
   }
 
   public UTF8BytesString getThreadName() {
-    return threadName;
+    return UTF8BytesString.create(threadName);
   }
 
   public Map<String, Object> getTags() {

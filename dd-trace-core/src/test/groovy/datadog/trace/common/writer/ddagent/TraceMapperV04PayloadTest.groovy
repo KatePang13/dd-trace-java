@@ -1,5 +1,8 @@
 package datadog.trace.common.writer.ddagent
 
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.ObjectReader
 import datadog.trace.core.serialization.ByteBufferConsumer
 import datadog.trace.core.serialization.msgpack.MsgPackWriter
 import datadog.trace.test.util.DDSpecification
@@ -13,7 +16,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.WritableByteChannel
 
 import static datadog.trace.bootstrap.instrumentation.api.InstrumentationTags.DD_MEASURED
-import static datadog.trace.common.writer.ddagent.TraceGenerator.generateRandomTraces
 import static org.junit.Assert.assertEquals
 import static org.msgpack.core.MessageFormat.FLOAT32
 import static org.msgpack.core.MessageFormat.FLOAT64
@@ -32,10 +34,10 @@ class TraceMapperV04PayloadTest extends DDSpecification {
 
   def "test traces written correctly"() {
     setup:
-    List<List<TraceGenerator.PojoSpan>> traces = generateRandomTraces(traceCount, lowCardinality)
+    List<List<TraceGenerator.PojoSpan>> traces = restoreTraces()
     TraceMapperV0_4 traceMapper = new TraceMapperV0_4()
     PayloadVerifier verifier = new PayloadVerifier(traces, traceMapper)
-    MsgPackWriter packer = new MsgPackWriter(verifier, ByteBuffer.allocate(bufferSize))
+    MsgPackWriter packer = new MsgPackWriter(verifier, ByteBuffer.allocate(100 << 10))
     when:
     boolean tracesFitInBuffer = true
     try {
@@ -51,27 +53,24 @@ class TraceMapperV04PayloadTest extends DDSpecification {
     if (tracesFitInBuffer) {
       verifier.verifyTracesConsumed()
     }
+  }
 
-    where:
-    bufferSize | traceCount | lowCardinality
-    10 << 10   | 0          | true
-    10 << 10   | 1          | true
-    30 << 10   | 1          | true
-    30 << 10   | 2          | true
-    10 << 10   | 0          | false
-    10 << 10   | 1          | false
-    30 << 10   | 1          | false
-    30 << 10   | 2          | false
-    100 << 10  | 0          | true
-    100 << 10  | 1          | true
-    100 << 10  | 10         | true
-    100 << 10  | 100        | true
-    100 << 10  | 1000       | true
-    100 << 10  | 0          | false
-    100 << 10  | 1          | false
-    100 << 10  | 10         | false
-    100 << 10  | 100        | false
-    100 << 10  | 1000       | false
+  def restoreTraces() {
+    ObjectMapper objectMapper = new ObjectMapper()
+    ObjectReader objectReader = objectMapper.readerFor(TraceGenerator.PojoSpan.class)
+    List traces = new ArrayList()
+    List spans = new ArrayList()
+    new BufferedReader(new InputStreamReader(getClass().getResourceAsStream('/traces.json'))).withCloseable {
+      reader ->
+        reader.eachLine {
+          if ("]" == it) {
+            traces.add(spans)
+            spans = new ArrayList()
+          } else {
+            spans.add((TraceGenerator.PojoSpan) objectReader.readValue(it))
+          }
+    }}
+    return traces
   }
 
   private static final class PayloadVerifier implements ByteBufferConsumer, WritableByteChannel {
