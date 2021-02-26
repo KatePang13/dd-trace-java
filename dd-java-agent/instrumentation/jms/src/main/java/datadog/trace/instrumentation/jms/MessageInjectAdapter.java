@@ -3,6 +3,8 @@ package datadog.trace.instrumentation.jms;
 import datadog.trace.bootstrap.instrumentation.api.AgentPropagation;
 import javax.jms.JMSException;
 import javax.jms.Message;
+
+import datadog.trace.util.Strings;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -12,7 +14,7 @@ public class MessageInjectAdapter implements AgentPropagation.Setter<Message> {
 
   @Override
   public void set(final Message carrier, final String key, final String value) {
-    final String propName = key.replace("-", "__dash__");
+    final String propName = Strings.replace(key, "-", "__dash__");
     try {
       carrier.setStringProperty(propName, value);
     } catch (final JMSException e) {

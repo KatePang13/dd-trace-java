@@ -16,10 +16,12 @@ public class MessageExtractAdapter implements AgentPropagation.ContextVisitor<Me
       new Function<String, String>() {
         @Override
         public String apply(String key) {
-          return key.replace('$', '-')
-              // true story \/
-              .replace("__dash__", "-")
-              .toLowerCase();
+
+          StringBuilder builder = new StringBuilder(key);
+          int i;
+          while ((i = builder.indexOf("$")) != -1) builder.replace(i, i + "$".length(), "-");
+          while ((i = builder.indexOf("__dash__")) != -1) builder.replace(i, i + "__dash__".length(), "-");
+          return builder.toString().toLowerCase();
         }
       };
 
