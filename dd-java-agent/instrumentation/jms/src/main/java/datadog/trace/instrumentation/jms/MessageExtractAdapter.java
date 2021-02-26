@@ -20,7 +20,8 @@ public class MessageExtractAdapter implements AgentPropagation.ContextVisitor<Me
           StringBuilder builder = new StringBuilder(key);
           int i;
           while ((i = builder.indexOf("$")) != -1) builder.replace(i, i + "$".length(), "-");
-          while ((i = builder.indexOf("__dash__")) != -1) builder.replace(i, i + "__dash__".length(), "-");
+          while ((i = builder.indexOf("__dash__")) != -1)
+            builder.replace(i, i + "__dash__".length(), "-");
           return builder.toString().toLowerCase();
         }
       };
