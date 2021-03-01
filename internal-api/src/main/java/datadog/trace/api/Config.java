@@ -173,6 +173,7 @@ import datadog.trace.api.config.TracerConfig;
 import datadog.trace.bootstrap.config.provider.CapturedEnvironmentConfigSource;
 import datadog.trace.bootstrap.config.provider.ConfigProvider;
 import datadog.trace.bootstrap.config.provider.SystemPropertiesConfigSource;
+import datadog.trace.bootstrap.instrumentation.api.Tags;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedReader;
 import java.io.File;
@@ -376,6 +377,8 @@ public class Config {
 
   @Getter private final String jdbcPreparedStatementClassName;
   @Getter private final String jdbcConnectionClassName;
+
+  private Map<String, String> unifiedServiceTaggingMap;
 
   private final ConfigProvider configProvider;
 
@@ -765,6 +768,30 @@ public class Config {
     CharSequence version = tags.get(VERSION);
     return new WellKnownTags(
         getHostName(), null == env ? "" : env, serviceName, null == version ? "" : version);
+  }
+
+  public Map<String, String> getUnifiedServiceTaggingMap() {
+    // intentionally not thread safe
+    if (unifiedServiceTaggingMap == null) {
+      Map<String, String> unifiedTags = new HashMap<>();
+      unifiedTags.put(Tags.DD_SERVICE, getServiceName());
+      final Map<String, String> mergedSpanTags = getMergedSpanTags();
+      String version = mergedSpanTags.get("version");
+      if (version == null) {
+        version = "";
+      }
+
+      String env = mergedSpanTags.get("env");
+      if (env == null) {
+        env = "";
+      }
+
+      unifiedTags.put(Tags.DD_VERSION, version);
+      unifiedTags.put(Tags.DD_ENV, env);
+      unifiedServiceTaggingMap = Collections.unmodifiableMap(unifiedTags);
+    }
+
+    return unifiedServiceTaggingMap;
   }
 
   public Map<String, String> getMergedSpanTags() {
