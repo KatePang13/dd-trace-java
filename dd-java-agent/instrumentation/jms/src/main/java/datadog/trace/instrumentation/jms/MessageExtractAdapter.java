@@ -7,22 +7,22 @@ import datadog.trace.bootstrap.instrumentation.api.AgentPropagation;
 import java.util.Enumeration;
 import javax.jms.JMSException;
 import javax.jms.Message;
+
+import de.thetaphi.forbiddenapis.SuppressForbidden;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class MessageExtractAdapter implements AgentPropagation.ContextVisitor<Message> {
 
+  @SuppressForbidden
   private static final Function<String, String> KEY_MAPPER =
       new Function<String, String>() {
         @Override
         public String apply(String key) {
-
-          StringBuilder builder = new StringBuilder(key);
-          int i;
-          while ((i = builder.indexOf("$")) != -1) builder.replace(i, i + "$".length(), "-");
-          while ((i = builder.indexOf("__dash__")) != -1)
-            builder.replace(i, i + "__dash__".length(), "-");
-          return builder.toString().toLowerCase();
+          return key.replace('$', '-')
+            // true story \/
+            .replace("__dash__", "-")
+            .toLowerCase();
         }
       };
 
