@@ -4,11 +4,10 @@ import datadog.trace.api.Function;
 import datadog.trace.api.cache.DDCache;
 import datadog.trace.api.cache.DDCaches;
 import datadog.trace.bootstrap.instrumentation.api.AgentPropagation;
+import de.thetaphi.forbiddenapis.SuppressForbidden;
 import java.util.Enumeration;
 import javax.jms.JMSException;
 import javax.jms.Message;
-
-import de.thetaphi.forbiddenapis.SuppressForbidden;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -20,9 +19,9 @@ public class MessageExtractAdapter implements AgentPropagation.ContextVisitor<Me
         @Override
         public String apply(String key) {
           return key.replace('$', '-')
-            // true story \/
-            .replace("__dash__", "-")
-            .toLowerCase();
+              // true story \/
+              .replace("__dash__", "-")
+              .toLowerCase();
         }
       };
 

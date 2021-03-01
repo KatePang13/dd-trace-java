@@ -744,7 +744,7 @@ public enum JDBCConnectionUrlParser {
     }
     final Map<String, String> query_pairs = new LinkedHashMap<>();
     int start = 0;
-    for (int i = query.indexOf(separator) ; start != -1; i = query.indexOf(separator, i + 1)) {
+    for (int i = query.indexOf(separator); start != -1; i = query.indexOf(separator, i + 1)) {
       try {
         final String pair = i >= 0 ? query.substring(start, i) : query.substring(start);
         final int idx = pair.indexOf('=');
